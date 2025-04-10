@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./index.css">
+    <title>Websockets in Go</title>
+  </head>
+  <body>
+    <div class="center">
+      <h1>This is a chat app.</h1>
+      <h3 id="chat-header">Currently in chat: general</h3>
+      <h3 id="connection-header">Connected to websocket: false</h3>
+      <form id="chatroom-selection">
+        <label for="chatroom">Chatroom</label>
+        <input id="chatroom" name="chatroom" type="text" />
+        <br />
+        <br />
+        <input type="submit" value="Change Chatroom" />
+      </form>
+      <br />
+      <textarea
+        name="message-area"
+        id="chat-messages"
+        rows="4"
+        cols="50"
+        placeholder="Welcome to Chatroom"
+        readonly
+      >
+      </textarea>
+      <br />
+      <form id="chatroom-message">
+        <label for="message">Message:</label>
+        <input type="text" id="message" name="message" />
+        <br />
+        <br />
+        <input type="submit" value="Send Message" />
+      </form>
+
+      <div id="login-box">
+        <form id="login-form">
+          <label for="username">Username:</label>
+          <input type="text" id="username" name="username">
+          <br>
+          <br>
+          <label for="password">Password:</label>
+          <input type="text" id="password" name="password">
+          <br>
+          <br>
+          <input type="submit" value="Login">
+        </form>
+      </div>
+    </div>
+    <script src="./index.js"></script>
+  </body>
+</html>
