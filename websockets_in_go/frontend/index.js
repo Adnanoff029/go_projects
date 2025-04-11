@@ -7,19 +7,43 @@ class Event {
   }
 }
 
+class SendMessageEvent {
+  constructor(message, from) {
+    this.message = message;
+    this.from = from;
+  }
+}
+
+class NewMessageEvent {
+  constructor(message, from, sent) {
+    this.message = message;
+    this.from = from;
+    this.sent = sent;
+  }
+}
+
 function routeEvent(event) {
   if (event.type === undefined) {
     window.alert("No type field in the event.");
   }
   const { type, _ } = event;
   switch (type) {
-    case "send_message":
-      console.log("New Message");
+    case "new_message":
+      const messageEvent = Object.assign(new NewMessageEvent(), event.payload);
+      appendChatMessage(messageEvent);
       break;
     default:
       alert("Unsupported Message Type.");
       break;
   }
+}
+
+function appendChatMessage(messageEvent) {
+  var date = new Date(messageEvent.sent);
+  const formattedMsg = `${date.toLocaleString()}: ${messageEvent.message}`;
+  var textarea = document.getElementById("chat-messages");
+  textarea.innerHTML = textarea.innerHTML + "\n" + formattedMsg;
+  textarea.scrollTop = textarea.scrollHeight;
 }
 
 function sendEvent(eventName, payload) {
@@ -38,7 +62,8 @@ function changeChatRoom() {
 function sendMessage() {
   const newMessage = document.getElementById("message");
   if (newMessage != null) {
-    sendEvent("send_message", newMessage.value);
+    let outgoingEvent = new SendMessageEvent(newMessage.value, "adnan");
+    sendEvent("send_message", outgoingEvent);
   }
   return false;
 }
@@ -48,8 +73,7 @@ function connectWebsocket(otp) {
     console.log("Websockets supported.");
     // new Websocket(url, protocols)
     connection = new WebSocket(
-      "ws://" + document.location.host + "/ws?otp=",
-      otp
+      "ws://" + document.location.host + "/ws?otp=" + otp
     );
 
     connection.onopen = function (event) {

@@ -1,11 +1,14 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -21,13 +24,15 @@ var (
 type Manager struct {
 	Clients ClientList
 	sync.RWMutex
+	OTPs     RetentionMap
 	Handlers map[string]EventHandler
 }
 
-func NewManager() *Manager {
+func NewManager(ctx context.Context) *Manager {
 	m := &Manager{
 		Clients:  make(ClientList),
 		Handlers: make(map[string]EventHandler),
+		OTPs:     NewRetentionMap(ctx, 5*time.Second),
 	}
 	m.SetupEventHandlers()
 	return m
@@ -48,7 +53,46 @@ func (m *Manager) SetupEventHandlers() {
 	m.Handlers[EventSendMessage] = SendMessage
 }
 
+func (m *Manager) LoginHandler(w http.ResponseWriter, r *http.Request) {
+	type userLoginRequest struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	var req userLoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Username == "adnan" && req.Password == "adnan" {
+		type response struct {
+			OTP string `json:"otp"`
+		}
+		otp := m.OTPs.NewOTP()
+		resp := response{
+			OTP: otp.Key,
+		}
+		data, err := json.Marshal(resp)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(data)
+		return
+	}
+	w.WriteHeader(http.StatusUnauthorized)
+}
+
 func (m *Manager) ServerWS(w http.ResponseWriter, r *http.Request) {
+	otp := r.URL.Query().Get("otp")
+	if otp == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if !m.OTPs.VerifyOTP(otp) {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 	log.Println("New Connection")
 	conn, err := WebSocketUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -78,7 +122,25 @@ func (m *Manager) RemoveClient(client *Client) {
 }
 
 func SendMessage(event Event, c *Client) error {
-	fmt.Println(event)
+	var charEvent SendMessageEvent
+	if err := json.Unmarshal(event.Payload, &charEvent); err != nil {
+		return fmt.Errorf("Bad Payload: %v", err)
+	}
+	var broadMessage NewMessageEvent
+	broadMessage.Sent = time.Now()
+	broadMessage.Message = charEvent.Message
+	broadMessage.From = charEvent.From
+	data, err := json.Marshal(broadMessage)
+	if err != nil {
+		return fmt.Errorf("Failed to marshal broadcast message: %v", err)
+	}
+	outgoingEvent := Event{
+		Payload: data,
+		Type:    EventNewMessage,
+	}
+	for client := range c.Manager.Clients {
+		client.Egress <- outgoingEvent
+	}
 	return nil
 }
 
