@@ -1,0 +1,23 @@
+This is a go module for JWT base authentication (with refresh and access tokens along with other details).
+
+// Endpoints
+    1. Signup
+    2. Login
+    3. Get all users
+    4. Get user by id
+
+// Database -> MongoDB
+
+// Foler architecture
+    go_jwt
+        controllers
+        database
+        helpers
+        models
+            userModel.go
+        routes
+            authRouter.go
+            userRouter.go
+        main.go
+        go.mod
+        go.sum
